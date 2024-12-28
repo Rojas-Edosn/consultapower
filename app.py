@@ -7,8 +7,17 @@ import traceback
 
 app = Flask(__name__)
 
+# Inicializando o cliente MongoDB
 MONGO_URI = os.environ.get("MONGODB_URI")
 client = MongoClient(MONGO_URI, server_api=ServerApi('1'))
+
+# Testando a conexão ao MongoDB
+try:
+    client.admin.command('ping')
+    print("Conexão com MongoDB bem-sucedida!")
+except Exception as e:
+    print(f"Erro ao conectar ao MongoDB: {e}")
+
 db = client["Assuntos"]
 collection = db["Crisp.Assuntos Crisp"]
 
