@@ -1,23 +1,26 @@
 from flask import Flask, request, jsonify
-import pyodbc
+from pymongo import MongoClient
 import os
+from bson import ObjectId
 
 app = Flask(__name__)
 
-DB_CONNECTION_STRING = os.environ.get("DB_CONNECTION_STRING")
+MONGO_URI = os.environ.get("MONGODB_URI")
+client = MongoClient(MONGO_URI)
+db = client["Assuntos"]
+collection = db["Crisp.Assuntos Crisp"]
 
 @app.route('/data', methods=['GET'])
 def get_data():
     try:
-        conn = pyodbc.connect(DB_CONNECTION_STRING)
-        cursor = conn.cursor()
-        query = "SELECT * FROM CrispAssuntos"
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        data = []
-        for row in rows:
-            data.append(dict(zip([column[0] for column in cursor.description], row)))
-        conn.close()
+        filtro = request.args.get("filter", "{}")
+        campos = request.args.get("fields", "{}")
+        filtro = eval(filtro) if filtro else {}
+        campos = eval(campos) if campos else {"_id": 1}
+        data = list(collection.find(filtro, campos))
+        for item in data:
+            if "_id" in item:
+                item["_id"] = str(item["_id"])
         return jsonify({"status": "sucesso", "data": data}), 200
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
