@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
-from pymongo import MongoClient
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 import os
 import json
 import traceback
@@ -7,7 +8,7 @@ import traceback
 app = Flask(__name__)
 
 MONGO_URI = os.environ.get("MONGODB_URI")
-client = MongoClient(MONGO_URI)
+client = MongoClient(MONGO_URI, server_api=ServerApi('1'))
 db = client["Assuntos"]
 collection = db["Crisp.Assuntos Crisp"]
 
@@ -18,7 +19,7 @@ def home():
 @app.route('/test-db', methods=['GET'])
 def test_db():
     try:
-        client.server_info()
+        client.admin.command('ping')
         return jsonify({"status": "sucesso", "mensagem": "Conexão com MongoDB bem-sucedida"}), 200
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
