@@ -15,6 +15,14 @@ collection = db["Crisp.Assuntos Crisp"]
 def home():
     return jsonify({"status": "sucesso", "mensagem": "API funcionando"}), 200
 
+@app.route('/test-db', methods=['GET'])
+def test_db():
+    try:
+        client.server_info()
+        return jsonify({"status": "sucesso", "mensagem": "Conexão com MongoDB bem-sucedida"}), 200
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
 @app.route('/data', methods=['GET'])
 def get_data():
     try:
@@ -36,5 +44,5 @@ def get_data():
         return jsonify(error_message), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 80))
     app.run(host='0.0.0.0', port=port, debug=True)
