@@ -33,25 +33,30 @@ def get_data():
         return jsonify({"status": "erro", "mensagem": "Conexão com MongoDB falhou"}), 500
     try:
         print("Rota '/data' acessada")
-        
+
         filtro = request.args.get("filter", "{}")
         campos = request.args.get("fields", "{}")
-        page = int(request.args.get("page", 1))  
-        limit = int(request.args.get("limit", 10000))  
+        page = int(request.args.get("page", 1))
+        limit = int(request.args.get("limit", 10000))
 
         print(f"Parâmetros recebidos: filtro={filtro}, campos={campos}, page={page}, limit={limit}")
-        
-        filtro = json.loads(filtro) if filtro else {}
-        campos = json.loads(campos) if campos else {"_id": 1}
-        
-        skip = (page - 1) * limit
-        
-        data = list(collection.find(filtro, campos).skip(skip).limit(limit))
-        data = [
-            {**item, "_id": str(item["_id"])} for item in data if "_id" in item
-        ]
 
-        print(f"Dados retornados: {data}")
+        filtro = json.loads(filtro) if filtro else {}
+        campos = json.loads(campos) if campos else {"_id": 1, "data": 1, "event": 1, "timestamp": 1, "website_id": 1}
+
+        skip = (page - 1) * limit
+
+        cursor = collection.find(filtro, campos).skip(skip).limit(limit)
+        data = []
+
+        for item in cursor:
+            if "_id" in item:
+                item["_id"] = str(item["_id"])
+            if "timestamp" in item:
+                item["timestamp"] = int(item["timestamp"])
+            data.append(item)
+
+        print(f"Dados retornados (tamanho={len(data)}): Página {page}")
         return jsonify({"status": "sucesso", "data": data, "page": page, "limit": limit}), 200
     except Exception as e:
         error_message = {
