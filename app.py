@@ -1,40 +1,33 @@
 from flask import Flask, request, jsonify
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
+from pymongo import MongoClient
 import os
 import json
 import traceback
 
 app = Flask(__name__)
 
-# Inicializando o cliente MongoDB
 MONGO_URI = os.environ.get("MONGODB_URI")
-client = MongoClient(MONGO_URI, server_api=ServerApi('1'))
-
-# Testando a conexão ao MongoDB
 try:
-    client.admin.command('ping')
-    print("Conexão com MongoDB bem-sucedida!")
+    client = MongoClient(MONGO_URI)
+    client.server_info()  
+    print("Conexão com MongoDB bem-sucedida")
 except Exception as e:
     print(f"Erro ao conectar ao MongoDB: {e}")
+    client = None 
 
-db = client["Assuntos"]
-collection = db["Crisp.Assuntos Crisp"]
+db = client["Assuntos"] if client else None
+collection = db["Crisp.Assuntos Crisp"] if db else None
 
 @app.route('/', methods=['GET'])
 def home():
+    if not client:
+        return jsonify({"status": "erro", "mensagem": "Conexão com MongoDB falhou"}), 500
     return jsonify({"status": "sucesso", "mensagem": "API funcionando"}), 200
-
-@app.route('/test-db', methods=['GET'])
-def test_db():
-    try:
-        client.admin.command('ping')
-        return jsonify({"status": "sucesso", "mensagem": "Conexão com MongoDB bem-sucedida"}), 200
-    except Exception as e:
-        return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 @app.route('/data', methods=['GET'])
 def get_data():
+    if not client:
+        return jsonify({"status": "erro", "mensagem": "Conexão com MongoDB falhou"}), 500
     try:
         filtro = request.args.get("filter", "{}")
         campos = request.args.get("fields", "{}")
@@ -55,4 +48,4 @@ def get_data():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 80))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, d
