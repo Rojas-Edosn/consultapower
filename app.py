@@ -1,4 +1,4 @@
-from flask import Flask, Response, request, jsonify
+from flask import Flask, request, jsonify
 from pymongo import MongoClient
 import os
 import json
@@ -18,37 +18,52 @@ except Exception as e:
 db = client["Assuntos"] if client is not None else None
 collection = db["Crisp.Assuntos Crisp"] if db is not None else None
 
-@app.route('/stream_data', methods=['GET'])
-def stream_data():
+@app.route('/', methods=['GET'])
+def home():
     if client is None:
+        print("Tentativa de acesso à rota '/', mas conexão com MongoDB falhou")
         return jsonify({"status": "erro", "mensagem": "Conexão com MongoDB falhou"}), 500
+    print("A rota '/' foi acessada com sucesso")
+    return jsonify({"status": "sucesso", "mensagem": "API funcionando"}), 200
 
+@app.route('/data', methods=['GET'])
+def get_data():
+    if client is None:
+        print("Tentativa de acesso à rota '/data', mas conexão com MongoDB falhou")
+        return jsonify({"status": "erro", "mensagem": "Conexão com MongoDB falhou"}), 500
     try:
+        print("Rota '/data' acessada")
+        
         filtro = request.args.get("filter", "{}")
         campos = request.args.get("fields", "{}")
+        page = int(request.args.get("page", 1))  
+        limit = int(request.args.get("limit", 10000))  
+
+        print(f"Parâmetros recebidos: filtro={filtro}, campos={campos}, page={page}, limit={limit}")
+        
         filtro = json.loads(filtro) if filtro else {}
         campos = json.loads(campos) if campos else {"_id": 1}
+        
+        skip = (page - 1) * limit
+        
+        data = list(collection.find(filtro, campos).skip(skip).limit(limit))
+        data = [
+            {**item, "_id": str(item["_id"])} for item in data if "_id" in item
+        ]
 
-        # Definindo um gerador para enviar dados em chunks
-        def generate():
-            cursor = collection.find(filtro, campos, no_cursor_timeout=True)
-            try:
-                for item in cursor:
-                    item["_id"] = str(item["_id"])
-                    yield json.dumps(item) + "\n"
-            finally:
-                cursor.close()
-
-        return Response(generate(), content_type='application/json')
+        print(f"Dados retornados: {data}")
+        return jsonify({"status": "sucesso", "data": data, "page": page, "limit": limit}), 200
     except Exception as e:
         error_message = {
             "status": "erro",
             "mensagem": str(e),
             "trace": traceback.format_exc()
         }
+        print(f"Erro na rota '/data': {error_message}")
         return jsonify(error_message), 500
 
 if __name__ == '__main__':
     print("Iniciando o servidor Flask...")
     port = int(os.environ.get("PORT", 80))
+    print(f"Servidor escutando na porta {port}")
     app.run(host='0.0.0.0', port=port, debug=True)
