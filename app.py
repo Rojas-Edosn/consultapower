@@ -21,22 +21,29 @@ collection = db["Crisp.Assuntos Crisp"] if db is not None else None
 @app.route('/', methods=['GET'])
 def home():
     if client is None:
+        print("Tentativa de acesso à rota '/', mas conexão com MongoDB falhou")
         return jsonify({"status": "erro", "mensagem": "Conexão com MongoDB falhou"}), 500
+    print("A rota '/' foi acessada com sucesso")
     return jsonify({"status": "sucesso", "mensagem": "API funcionando"}), 200
 
 @app.route('/data', methods=['GET'])
 def get_data():
     if client is None:
+        print("Tentativa de acesso à rota '/data', mas conexão com MongoDB falhou")
         return jsonify({"status": "erro", "mensagem": "Conexão com MongoDB falhou"}), 500
     try:
+        print("Rota '/data' acessada")
         filtro = request.args.get("filter", "{}")
         campos = request.args.get("fields", "{}")
+        print(f"Parâmetros recebidos: filtro={filtro}, campos={campos}")
         filtro = json.loads(filtro) if filtro else {}
         campos = json.loads(campos) if campos else {"_id": 1}
+        print(f"Filtros processados: filtro={filtro}, campos={campos}")
         data = list(collection.find(filtro, campos))
         data = [
             {**item, "_id": str(item["_id"])} for item in data if "_id" in item
         ]
+        print(f"Dados retornados: {data}")
         return jsonify({"status": "sucesso", "data": data}), 200
     except Exception as e:
         error_message = {
@@ -44,8 +51,11 @@ def get_data():
             "mensagem": str(e),
             "trace": traceback.format_exc()
         }
+        print(f"Erro na rota '/data': {error_message}")
         return jsonify(error_message), 500
 
 if __name__ == '__main__':
+    print("Iniciando o servidor Flask...")
     port = int(os.environ.get("PORT", 80))
+    print(f"Servidor escutando na porta {port}")
     app.run(host='0.0.0.0', port=port, debug=True)
